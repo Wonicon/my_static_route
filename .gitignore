@@ -1,4 +1,4 @@
 ./device
 ./ip_table
 ./arp_cache
-./.tags
+./tags
