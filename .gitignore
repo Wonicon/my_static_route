@@ -1,4 +1,4 @@
 device
-ip_table
+ip_table.txt
 arp_cache
 tags
