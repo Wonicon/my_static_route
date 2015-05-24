@@ -128,7 +128,10 @@ void ip_route(int sock, uint8_t *packet, int size)
 		//
 		//  TODO use route table to select a device and update next_ip
 		//
-		return;
+		printf("routing...");
+		IPTE *next = next_hop(ip->daddr);
+		device = select_device(next->src);
+		next_ip = next->src;
 	}
 
 	assert(device != NULL);

@@ -82,7 +82,6 @@ IPTE *next_hop(uint32_t dst)
     uint32_t mask;
     for (int i = 0; i < n_table; i++) {
         mask = table[i].mask;
-		printf("\n");
         if ((mask & table[i].dst) == (mask & dst)) {
 			printf("hit\n");
             return table + i;
