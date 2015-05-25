@@ -92,6 +92,6 @@ IPTE *next_hop(uint32_t dst)
     }
 
     // if not found
-	printf("foooooooooooooooooooo\n");
+	printf("ip table miss\n");
     return NULL;
 }

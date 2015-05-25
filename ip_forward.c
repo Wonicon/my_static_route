@@ -151,6 +151,9 @@ void ip_route(int sock, uint8_t *packet, int size)
     if (dsttype == 0) {
         printf("routing...");
         IPTE *next = next_hop(ip->daddr);
+        if (next == NULL) {
+            return;
+        }
         dstdev = select_device(next->src, &dsttype);
         mac = get_mac(next->src);
         if (mac == NULL) {
