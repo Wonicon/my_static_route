@@ -18,6 +18,7 @@
 #define BUFFER_MAX 2048
 
 int sock_fd;
+void resend_packet(uint32_t ip, uint8_t *mac);
 void main_loop()
 {
     ssize_t n_read;
@@ -51,7 +52,9 @@ void main_loop()
                     break;
                 printf("ARP reply tpa %s tha %s\n",
                         iptoa(*(uint32_t *)(arp->spa)), mactoa(arp->sha));
+
                 add_mac(*(uint32_t *)(arp->spa), arp->sha);
+                resend_packet(*(uint32_t *)(arp->spa), arp->sha);
                 break;
         }
         printf("============================================\n");

@@ -129,6 +129,7 @@ void init_addr(const char *device)
 //
 //  routing
 //
+void packet_wait(uint32_t ip, uint8_t *pac, int size, const char *device);
 void ip_route(int sock, uint8_t *packet, int size)
 {
 	struct iphdr *ip = (void *)(packet + sizeof(ETH_HEAD));
@@ -165,6 +166,7 @@ void ip_route(int sock, uint8_t *packet, int size)
         //  TODO ARP
         printf("Send arp request...\n");
         make_arp(next_ip, dstdev->ip, dstdev->mac, dstdev->name);
+        packet_wait(next_ip, packet, size, dstdev->name);
         return;
     }
  

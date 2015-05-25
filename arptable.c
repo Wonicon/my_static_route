@@ -78,3 +78,53 @@ void add_mac(uint32_t ip, uint8_t *mac)
     memcpy(arp_table[n].mac, mac, 6);
     n++;
 }
+
+struct wait_packet {
+    uint32_t ip;
+    int size;
+    uint8_t *packet;
+    const char *device;
+} wait_buffer[BUFFER_SIZE];
+
+int last_index = 0;
+#include <malloc.h>
+void init_wait_buffer()
+{
+    memset(wait_buffer, 0, sizeof(wait_buffer));
+}
+
+void packet_wait(uint32_t ip, uint8_t *pac, int size, const char *device)
+{
+    int i;
+    for (i = 0; i < BUFFER_SIZE; i++) {
+        if (wait_buffer[i].ip == 0) {
+            break;
+        }
+    }
+    if (i < BUFFER_SIZE) {
+        wait_buffer[i].ip = ip;
+        wait_buffer[i].size = size;
+        wait_buffer[i].packet = (void *)malloc(size);
+        memcpy(wait_buffer[i].packet, pac, size);
+        wait_buffer[i].device = device;
+    }
+    if (i > last_index)
+        last_index = i;
+}
+
+extern int sock_fd;
+void forward(int sock, const char *device, uint8_t *mac, uint8_t *packet, int n);
+void resend_packet(uint32_t ip, uint8_t *mac)
+{
+    for (int i = 0; i <= last_index; i++) {
+        if (wait_buffer[i].ip == ip) {
+            forward(sock_fd,
+                    wait_buffer[i].device,
+                    mac,
+                    wait_buffer[i].packet,
+                    wait_buffer[i].size);
+            free(wait_buffer[i].packet);
+            wait_buffer[i].ip = 0;
+        }
+    }
+}
