@@ -79,6 +79,9 @@ void print_ip(uint32_t addr)
 //
 IPTE *next_hop(uint32_t dst)
 {
+    printf("In next_hop dst addr");
+    print_ip(dst);
+    printf("\n");
     uint32_t mask;
     for (int i = 0; i < n_table; i++) {
         mask = table[i].mask;

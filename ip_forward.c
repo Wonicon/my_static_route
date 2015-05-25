@@ -54,18 +54,29 @@ void init_device_table()
 	}
 }
 
-const char *select_device(in_addr_t next_ip)
+#include <arpa/inet.h>
+struct in_addr tmp;
+const char *select_device(in_addr_t next_ip, int *out)
 {
 	for (int i = 0; i < device_count; i++) {
 		uint32_t mask = device_table[i].mask;
 		uint32_t ip = device_table[i].ip;
 		if ((mask & next_ip) == (device_table[i].ip & mask)) {
-			printf("device hit!\n");
+            tmp.s_addr = next_ip;
+            if (next_ip == device_table[i].ip) {
+                printf("IP %s is the net card!\n", inet_ntoa(tmp));
+                *out = 2;
+            }
+            else {
+                printf("IP %s found device\n", inet_ntoa(tmp));
+                *out = 1;
+            }
 			return device_table[i].name;
 		}
 	}
 
-	printf("no device found!\n");
+	printf("No device found!\n");
+    *out = 0;
 	return NULL;
 }
 
@@ -122,34 +133,37 @@ void init_addr(const char *device)
 void ip_route(int sock, uint8_t *packet, int size)
 {
 	struct iphdr *ip = (void *)(packet + sizeof(ETH_HEAD));
-	in_addr_t next_ip = ip->daddr;
-	const char *device = select_device(ip->daddr);
-	if (device == NULL) {
-		//
-		//  TODO use route table to select a device and update next_ip
-		//
-		printf("routing...");
-		IPTE *next = next_hop(ip->daddr);
-		device = select_device(next->src);
-		next_ip = next->src;
-	}
+    printf(" src addr ");
+    print_ip(ip->saddr);
+    printf(" dst addr ");
+    print_ip(ip->daddr);
+    printf("\n");
+    int dsttype, srctype;
+	const char *dstdev = select_device(ip->daddr, &dsttype);
+	const char *srcdev = select_device(ip->saddr, &srctype);
+    
+    uint8_t *mac;
+    if (dsttype == 2 || srctype == 2) {
+        printf("No need to route.\n");
+        return;
+    }
 
-	assert(device != NULL);
-
-	if (next_ip == ip->daddr) {
-		printf("This is an easy routing.\n");
-	}
-	
-	uint8_t *mac = get_mac(next_ip);
-	if (mac == NULL) {
-		//
-		//  TODO send an arp request, and store this packet
-		//  Now just throw it
-		//
-		return;
-	}
-	
-	forward(sock, device, mac, packet, size);
+    if (dsttype == 0) {
+        printf("routing...");
+        IPTE *next = next_hop(ip->daddr);
+        dstdev = select_device(next->src, &dsttype);
+        mac = get_mac(next->src);
+        if (mac == NULL) {
+            //  TODO ARP
+            return;
+        }
+    }
+    else {
+        printf("The new land!\n");
+        mac = get_mac(ip->daddr);
+        //  You should know the mac address of the net card
+    }
+    forward(sock, dstdev, mac, packet, size);
 }
 
 //
