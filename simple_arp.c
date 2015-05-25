@@ -41,9 +41,9 @@ int make_arp(
         uint8_t    *sender_mac,
         const char *interface)
 {
-    int timeout_ms;
+    //int timeout_ms;
     int s;
-    int rv = 1;  // no reply received yet
+    //int rv = 1;  // no reply received yet
     struct sockaddr addr;  // for interface name
     struct arp_packet arp;
 

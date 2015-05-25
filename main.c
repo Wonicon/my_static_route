@@ -16,7 +16,6 @@
 #define BUFFER_MAX 2048
 
 int sock_fd;
-
 void main_loop()
 {
     ssize_t n_read;
@@ -30,17 +29,11 @@ void main_loop()
 
         P_ETH_HEAD eth = (void *)buffer;
 
-        for (int i = 0; i < 6; i++) {
-            printf("%02x ", eth->dst_mac[i]);
-        }
-        printf("\n");
-        for (int i = 0; i < 6; i++) {
-            printf("%02x ", eth->src_mac[i]);
-        }
-        printf("\ntype: %04x\n", ntohs(eth->type));
+        printf("dst mac %s\n", mactoa(eth->dst_mac));
+        printf("src mac %s\n", mactoa(eth->src_mac));
+        printf("type: %04x\n", ntohs(eth->type));
 
 
-        P_ARP_DATAGRAM arp;
         switch (ntohs(eth->type))
         {
             case 0x0800:
@@ -53,7 +46,8 @@ void main_loop()
 				//
 				//  TODO Add arp handler here
 				//
-                arp = (void *)(buffer + sizeof(*eth));
+                //arp = (void *)(buffer + sizeof(*eth));
+                break;
         }
         printf("============================================\n");
     }

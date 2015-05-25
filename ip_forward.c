@@ -61,9 +61,9 @@ const char *select_device(in_addr_t next_ip, int *out)
 	for (int i = 0; i < device_count; i++) {
 		uint32_t mask = device_table[i].mask;
 		uint32_t ip = device_table[i].ip;
-		if ((mask & next_ip) == (device_table[i].ip & mask)) {
+		if ((mask & next_ip) == (ip & mask)) {
             tmp.s_addr = next_ip;
-            if (next_ip == device_table[i].ip) {
+            if (next_ip == ip) {
                 printf("IP %s is the net card!\n", inet_ntoa(tmp));
                 *out = 2;
             }
@@ -71,7 +71,7 @@ const char *select_device(in_addr_t next_ip, int *out)
                 printf("IP %s found device\n", inet_ntoa(tmp));
                 *out = 1;
             }
-			return device_table[i].name;
+			return (const char *)device_table[i].name;
 		}
 	}
 
@@ -140,7 +140,7 @@ void ip_route(int sock, uint8_t *packet, int size)
     printf("\n");
     int dsttype, srctype;
 	const char *dstdev = select_device(ip->daddr, &dsttype);
-	const char *srcdev = select_device(ip->saddr, &srctype);
+	select_device(ip->saddr, &srctype);
     
     uint8_t *mac;
     if (dsttype == 2 || srctype == 2) {
