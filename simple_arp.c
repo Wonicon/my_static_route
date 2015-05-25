@@ -1,20 +1,19 @@
-#include "simple_arp.h"
-
 #include <unistd.h>  // close()
 #include <errno.h>
 #include <netdb.h>
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
-#include <sys/ioctl.h>
-#include <netinet/if_ether.h>
-#include <net/if_arp.h>
-#include <netinet/udp.h>
-#include <netinet/ip.h>
+#include <linux/if_ether.h>
+#include <linux/if_arp.h>
+#include <linux/udp.h>
+#include <linux/ip.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include <net/if.h>
+
+#include <sys/ioctl.h>
+#include <linux/if.h>
 
 const int const_one = 1;
 int set_broadcast(int fd)
@@ -27,6 +26,8 @@ int set_broadcast(int fd)
             sizeof(const_one));
 }
 
+#include "simple_arp.h"
+#include "debug.h"
 char *strncpy_s(char *dst, const char *src, size_t size)
 {
     if (size == 0)
@@ -47,7 +48,7 @@ int make_arp(
     struct sockaddr addr;  // for interface name
     struct arp_packet arp;
 
-    s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ARP));
+    s = socket(PF_PACKET, SOCK_PACKET, htons(ETH_P_ARP));
     if (s == -1) {
         perror("raw_socket");
         goto ret;
@@ -75,6 +76,8 @@ int make_arp(
 
     /* sockaddr */
     memset(&addr, 0, sizeof(addr));
+    printf("Interface %s, ip %s, mac %s\n",
+            interface, iptoa(sender_ip), mactoa(sender_mac));
     strncpy_s(addr.sa_data, interface, sizeof(addr.sa_data));
     if (sendto(s, &arp, sizeof(arp), 0, &addr, sizeof(addr)) < 0) {
         perror("Send arp packet failed");
@@ -83,4 +86,52 @@ int make_arp(
 ret:
     close(s);
     return 1;
+}
+
+int read_interface(
+        const char *interface,
+        int *ifindex,
+        uint32_t *addr,
+        uint8_t *mac)
+{
+    int fd;
+    struct ifreq ifr;
+    struct sockaddr_in *ip;
+    
+    memset(&ifr, 0, sizeof(ifr));
+    fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+
+    ifr.ifr_addr.sa_family = AF_INET;
+    strcpy(ifr.ifr_name, interface);
+    if (addr) {
+        if (ioctl(fd, SIOCGIFADDR, &ifr) != 0) {
+            perror("ioctl");
+            close(fd);
+            return -1;
+        }
+        ip = (struct sockaddr_in *) &ifr.ifr_addr;
+        *addr = ip->sin_addr.s_addr;
+        printf("ip of %s = %s\n", interface, iptoa(*addr));
+    }
+
+    if (ifindex) {
+        if (ioctl(fd, SIOCGIFINDEX, &ifr) != 0) {
+            close(fd);
+            return -1;
+        }
+        printf("adapter index %d", ifr.ifr_ifindex);
+        *ifindex = ifr.ifr_ifindex;
+    }
+
+    if (mac) {
+        if (ioctl(fd, SIOCGIFHWADDR, &ifr) != 0) {
+            close(fd);
+            return -1;
+        }
+        memcpy(mac, ifr.ifr_hwaddr.sa_data, 6);
+        printf("adapter hardware address %s\n", mactoa(mac));
+    }
+
+    close(fd);
+    return 0;
 }

@@ -19,6 +19,8 @@
 #include "iptable.h"
 #include "hdr.h"
 #include "arptable.h"
+#include "debug.h"
+#include "simple_arp.h"
 
 extern int sock_fd;
 struct sockaddr a;
@@ -30,48 +32,45 @@ static uint8_t dst_mac[8];
 #define MAX_DEVICE 10
 struct device_item
 {
-	uint8_t name[16];
+	char name[16];
 	uint8_t mac[6];
 	uint32_t ip;
 	uint32_t mask;
 } device_table[MAX_DEVICE];
 int device_count = 0;
 
+#include "arptable.h"
 void init_device_table()
 {	
 	FILE *fd = fopen("device", "r");
-	char ipaddr[17];
+	char mask[17];
 	fscanf(fd, "%d", &device_count);
 	printf("line %d\n", device_count);
 	for (int i = 0; i < device_count; i++) {
 		fscanf(fd, "%s", device_table[i].name);
-		fscanf(fd, "%s", ipaddr);
-		device_table[i].ip = inet_addr(ipaddr);
-		printf("%s %s ", device_table[i].name, ipaddr);
-		fscanf(fd, "%s", ipaddr);
-		device_table[i].mask = inet_addr(ipaddr);
-		printf("%08x\n", device_table[i].mask);
+		fscanf(fd, "%s", mask);
+		device_table[i].mask = inet_addr(mask);
+        read_interface(device_table[i].name, NULL, &device_table[i].ip,
+                device_table[i].mac);
+        add_mac(device_table[i].ip, device_table[i].mac);
 	}
 }
 
-#include <arpa/inet.h>
-struct in_addr tmp;
-const char *select_device(in_addr_t next_ip, int *out)
+struct device_item *select_device(in_addr_t next_ip, int *out)
 {
 	for (int i = 0; i < device_count; i++) {
 		uint32_t mask = device_table[i].mask;
 		uint32_t ip = device_table[i].ip;
 		if ((mask & next_ip) == (ip & mask)) {
-            tmp.s_addr = next_ip;
             if (next_ip == ip) {
-                printf("IP %s is the net card!\n", inet_ntoa(tmp));
+                printf("IP %s is the net card!\n", iptoa(next_ip));
                 *out = 2;
             }
             else {
-                printf("IP %s found device\n", inet_ntoa(tmp));
+                printf("IP %s found device\n", iptoa(next_ip));
                 *out = 1;
             }
-			return (const char *)device_table[i].name;
+			return &device_table[i];
 		}
 	}
 
@@ -133,13 +132,11 @@ void init_addr(const char *device)
 void ip_route(int sock, uint8_t *packet, int size)
 {
 	struct iphdr *ip = (void *)(packet + sizeof(ETH_HEAD));
-    printf(" src addr ");
-    print_ip(ip->saddr);
-    printf(" dst addr ");
-    print_ip(ip->daddr);
-    printf("\n");
+    printf("src ip %s\n", iptoa(ip->saddr));
+    printf("dst ip %s\n", iptoa(ip->daddr));
+
     int dsttype, srctype;
-	const char *dstdev = select_device(ip->daddr, &dsttype);
+    struct device_item *dstdev = select_device(ip->daddr, &dsttype);
 	select_device(ip->saddr, &srctype);
     
     uint8_t *mac;
@@ -148,25 +145,30 @@ void ip_route(int sock, uint8_t *packet, int size)
         return;
     }
 
+    uint32_t next_ip;
     if (dsttype == 0) {
-        printf("routing...");
+        printf("Routing...\n");
         IPTE *next = next_hop(ip->daddr);
         if (next == NULL) {
             return;
         }
-        dstdev = select_device(next->src, &dsttype);
-        mac = get_mac(next->src);
-        if (mac == NULL) {
-            //  TODO ARP
-            return;
-        }
-    }
+        next_ip = next->src;
+        dstdev = select_device(next_ip, &dsttype);
+   }
     else {
-        printf("The new land!\n");
-        mac = get_mac(ip->daddr);
-        //  You should know the mac address of the net card
+        printf("Directly forwarding\n");
+        next_ip = ip->daddr;
     }
-    forward(sock, dstdev, mac, packet, size);
+
+    mac = get_mac(next_ip);
+    if (mac == NULL) {
+        //  TODO ARP
+        printf("Send arp request...\n");
+        make_arp(next_ip, dstdev->ip, dstdev->mac, dstdev->name);
+        return;
+    }
+ 
+    forward(sock, dstdev->name, mac, packet, size);
 }
 
 //
@@ -180,6 +182,6 @@ void forward(int sock, const char *device, uint8_t *mac, uint8_t *packet, int n)
 	memcpy(dst_mac, mac, 6);
 	init_addr(device);
 	memcpy(eth->dst_mac, dst_mac, 6);
-	printf("sending...\n");
+	printf("Sending...\n");
 	sendto(sock_fd, packet, n, 0, (struct sockaddr *)&socket_address, sizeof(struct sockaddr_ll));
 }

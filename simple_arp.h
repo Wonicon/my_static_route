@@ -1,5 +1,5 @@
-#ifndef _ARP_H_
-#define _ARP_H_
+#ifndef _ARPXXX_H_
+#define _ARPXXX_H_
 
 #include <stdint.h>
 
@@ -20,5 +20,17 @@ struct arp_packet {
     uint8_t pad[18];  //  0x2a pad for min ethernet payload
                       //  0x3c = 60
 } PACKED;
+
+int make_arp(
+        uint32_t    target_ip,
+        uint32_t    sender_ip,
+        uint8_t    *sender_mac,
+        const char *interface);
+
+int read_interface(
+        const char *interface,
+        int *ifindex,
+        uint32_t *addr,
+        uint8_t *mac);
 
 #endif

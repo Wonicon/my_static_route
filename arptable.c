@@ -3,6 +3,9 @@
 //
 
 #include "arptable.h"
+#include "iptable.h"
+#include "debug.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,18 +47,34 @@ void read_arp_cache()
     }
 }
 
-#include "iptable.h"
 uint8_t *get_mac(uint32_t ip)
 {
-	printf("scan arp cache\n");
-	printf("dest: ");
-	print_ip(ip);
-	printf("\n");
+	printf("Scan arp cache to find the mac address of %s\n", iptoa(ip));
     for (int i = 0; i < n; i++) {
         if (arp_table[i].ip == ip) {
+            printf("Found %s.\n", mactoa(arp_table[i].mac));
             return arp_table[i].mac;
         }
     }
 
+    printf("Failed.\n");
     return NULL;
+}
+
+#include <memory.h>
+void add_mac(uint32_t ip, uint8_t *mac)
+{
+    printf("add arp entry: %s %s\n", iptoa(ip), mactoa(mac));
+    if (n >= BUFFER_SIZE) {
+        return;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (arp_table[i].ip == ip) {
+            return;
+        }
+    }
+    arp_table[n].ip = ip;
+    memcpy(arp_table[n].mac, mac, 6);
+    n++;
 }

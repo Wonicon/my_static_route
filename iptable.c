@@ -3,6 +3,8 @@
 //
 
 #include "iptable.h"
+#include "debug.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,23 +67,11 @@ void read_table()
 }
 
 //
-// Display ip addr
-//
-void print_ip(uint32_t addr)
-{
-    uint8_t *p;
-    p = (void *)&addr;
-    printf("%d:%d:%d:%d ", p[0], p[1], p[2], p[3]);
-}
-
-//
 //  Search for the next src ip addr according to the dst ip addr
 //
 IPTE *next_hop(uint32_t dst)
 {
-    printf("In next_hop dst addr");
-    print_ip(dst);
-    printf("\n");
+    printf("To find the next hop of %s...", iptoa(dst));
     uint32_t mask;
     for (int i = 0; i < n_table; i++) {
         mask = table[i].mask;

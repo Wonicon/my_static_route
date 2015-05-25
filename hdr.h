@@ -3,6 +3,8 @@
 //
 
 #ifndef MYARP_HDR_H
+#define MYARP_HDR_H
+
 #include <stdint.h>
 #include <linux/if_arp.h>   // arphdr
 #define EPT_IP 0x0800 /* type: IP */
@@ -24,12 +26,5 @@ typedef struct arp_datagram /* Focus on TCP/IP with Ethernet II */
     uint8_t tha[6];
     uint8_t tpa[4];
 } ARP_DATAGRAM, *P_ARP_DATAGRAM;
-
-typedef struct arp_packet
-{
-    ETH_HEAD eth;
-    ARP_DATAGRAM arp;
-} ARP_PACKET, P_ARP_PACKET;
-#define MYARP_HDR_H
 
 #endif //MYARP_HDR_H

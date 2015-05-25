@@ -13,6 +13,8 @@
 #include "iptable.h"
 #include "arptable.h"
 #include "ip_forward.h"
+#include "debug.h"          // mactoa()
+#include "simple_arp.h"
 #define BUFFER_MAX 2048
 
 int sock_fd;
@@ -34,19 +36,22 @@ void main_loop()
         printf("type: %04x\n", ntohs(eth->type));
 
 
+        struct arp_packet *arp;
         switch (ntohs(eth->type))
         {
             case 0x0800:
-				//
-				//  TODO Complete routing code here
-				//
                 ip_route(sock_fd, buffer, n_read);
                 break;
             case 0x0806:
 				//
 				//  TODO Add arp handler here
 				//
-                //arp = (void *)(buffer + sizeof(*eth));
+                arp = (void *)(buffer);
+                if (arp->opt != 0x0200)
+                    break;
+                printf("ARP reply tpa %s tha %s\n",
+                        iptoa(*(uint32_t *)(arp->spa)), mactoa(arp->sha));
+                add_mac(*(uint32_t *)(arp->spa), arp->sha);
                 break;
         }
         printf("============================================\n");
@@ -62,9 +67,9 @@ int main()
         return -1;
     }
 
-	init_device_table();
-    read_table();
     read_arp_cache();
+    read_table();
+	init_device_table();
     main_loop();
     return 0;
 }

@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include "debug.h"
 const char *
 mactoa(uint8_t *mac)  // mac address to ascii
 {
@@ -12,13 +12,13 @@ mactoa(uint8_t *mac)  // mac address to ascii
 }
 
 const char *
-iptoa(uint32_t *ip)  // ip address to ascii
+iptoa(uint32_t ip)  // ip address to ascii
 {
     static char s[20];
     uint8_t *p = (void *)&ip;
     sprintf(s,
             "%d.%d.%d.%d",
-            p[3], p[2], p[1], p[0]);
+            p[0], p[1], p[2], p[3]);
     return s;
 }
 
